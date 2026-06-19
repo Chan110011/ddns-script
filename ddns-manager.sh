@@ -122,7 +122,7 @@ JSON
 }
 
 configure_cloudflare() {
-  local token ipv4_raw enable_ipv6 ipv6_raw ttl proxied_answer proxied
+  local token ipv4_raw ipv6_raw ttl proxied
   info "Cloudflare API Token 配置向导"
   read -r -s -p "请输入 Cloudflare API Token: " token
   printf "\n"
@@ -131,15 +131,12 @@ configure_cloudflare() {
     return 1
   fi
 
-  read -r -p "请输入 IPv4 域名, 多个用英文逗号分隔, 可留空: " ipv4_raw
-  read -r -p "是否启用 IPv6? [y/N]: " enable_ipv6
+  read -r -p "请输入 IPv4 域名, 多个用英文逗号分隔: " ipv4_raw
   ipv6_raw=""
-  if [[ "$enable_ipv6" == "y" || "$enable_ipv6" == "Y" ]]; then
-    read -r -p "请输入 IPv6 域名, 多个用英文逗号分隔: " ipv6_raw
-  fi
+  proxied="false"
 
-  if ! has_domain "$ipv4_raw" && ! has_domain "$ipv6_raw"; then
-    error "IPv4 和 IPv6 域名不能同时为空"
+  if ! has_domain "$ipv4_raw"; then
+    error "IPv4 域名不能为空"
     return 1
   fi
 
@@ -148,12 +145,6 @@ configure_cloudflare() {
   if ! [[ "$ttl" =~ ^[0-9]+$ ]]; then
     error "TTL 必须是数字"
     return 1
-  fi
-
-  read -r -p "是否开启 Cloudflare 代理 proxied? [y/N]: " proxied_answer
-  proxied="false"
-  if [[ "$proxied_answer" == "y" || "$proxied_answer" == "Y" ]]; then
-    proxied="true"
   fi
 
   write_cloudflare_config "$token" "$ipv4_raw" "$ipv6_raw" "$ttl" "$proxied"
