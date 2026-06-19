@@ -7,13 +7,13 @@
 在 Linux 服务器上执行：
 
 ```bash
-curl -fsSL -o /tmp/ddns-manager.sh https://raw.githubusercontent.com/Chan110011/ddns-script/main/ddns-manager.sh && sudo bash /tmp/ddns-manager.sh
+curl -fsSL -o /tmp/ddns-manager.sh https://raw.githubusercontent.com/Chan110011/ddns-script/main/install.sh && sudo bash /tmp/ddns-manager.sh
 ```
 
 如果系统没有 `curl`，可以使用：
 
 ```bash
-wget -O /tmp/ddns-manager.sh https://raw.githubusercontent.com/Chan110011/ddns-script/main/ddns-manager.sh && sudo bash /tmp/ddns-manager.sh
+wget -O /tmp/ddns-manager.sh https://raw.githubusercontent.com/Chan110011/ddns-script/main/install.sh && sudo bash /tmp/ddns-manager.sh
 ```
 
 ## 功能
@@ -40,3 +40,4 @@ wget -O /tmp/ddns-manager.sh https://raw.githubusercontent.com/Chan110011/ddns-s
 chmod +x ddns-manager.sh
 sudo ./ddns-manager.sh
 ```
+
