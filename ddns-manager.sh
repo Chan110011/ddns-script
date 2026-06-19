@@ -22,13 +22,13 @@ warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$*"; }
 error() { printf "${RED}[ERROR]${NC} %s\n" "$*" >&2; }
 
 pause() {
-  printf "\n? Enter ????..."
+  printf "\nPress Enter to return to menu..."
   read -r _ || true
 }
 
 require_root() {
   if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-    error "??? root ?????sudo bash $0"
+    error "Please run as root: sudo bash $0"
     exit 1
   fi
 }
@@ -40,7 +40,7 @@ command_exists() {
 require_command() {
   local cmd="$1"
   if ! command_exists "$cmd"; then
-    error "?????$cmd"
+    error "Missing required command: $cmd"
     return 1
   fi
 }
@@ -123,41 +123,41 @@ JSON
 
 configure_cloudflare() {
   local token ipv4_raw enable_ipv6 ipv6_raw ttl proxied_answer proxied
-  info "Cloudflare API Token ????"
-  read -r -s -p "??? Cloudflare API Token: " token
+  info "Cloudflare API Token setup wizard"
+  read -r -s -p "Enter Cloudflare API Token: " token
   printf "\n"
   if [[ -z "$token" ]]; then
-    error "API Token ????"
+    error "API Token cannot be empty"
     return 1
   fi
 
-  read -r -p "??? IPv4 ????????????????: " ipv4_raw
-  read -r -p "???? IPv6? [y/N]: " enable_ipv6
+  read -r -p "Enter IPv4 domains, comma separated, or leave empty: " ipv4_raw
+  read -r -p "Enable IPv6? [y/N]: " enable_ipv6
   ipv6_raw=""
   if [[ "$enable_ipv6" == "y" || "$enable_ipv6" == "Y" ]]; then
-    read -r -p "??? IPv6 ????????????: " ipv6_raw
+    read -r -p "Enter IPv6 domains, comma separated: " ipv6_raw
   fi
 
   if ! has_domain "$ipv4_raw" && ! has_domain "$ipv6_raw"; then
-    error "IPv4 ? IPv6 ????????"
+    error "IPv4 and IPv6 domain lists cannot both be empty"
     return 1
   fi
 
-  read -r -p "TTL??? 600: " ttl
+  read -r -p "TTL, default 600: " ttl
   ttl="${ttl:-600}"
   if ! [[ "$ttl" =~ ^[0-9]+$ ]]; then
-    error "TTL ?????"
+    error "TTL must be a number"
     return 1
   fi
 
-  read -r -p "???? Cloudflare ?? proxied? [y/N]: " proxied_answer
+  read -r -p "Enable Cloudflare proxied mode? [y/N]: " proxied_answer
   proxied="false"
   if [[ "$proxied_answer" == "y" || "$proxied_answer" == "Y" ]]; then
     proxied="true"
   fi
 
   write_cloudflare_config "$token" "$ipv4_raw" "$ipv6_raw" "$ttl" "$proxied"
-  success "??????$CONFIG_FILE"
+  success "Config written to: $CONFIG_FILE"
 }
 
 redact_token_stream() {
@@ -166,24 +166,24 @@ redact_token_stream() {
 
 show_config() {
   if [[ ! -f "$CONFIG_FILE" ]]; then
-    warn "????????$CONFIG_FILE"
+    warn "Config file not found: $CONFIG_FILE"
     return 0
   fi
-  info "???????$CONFIG_FILE"
+  info "Current config file: $CONFIG_FILE"
   redact_token_stream < "$CONFIG_FILE"
-  if confirm "?????? token ???"; then
+  if confirm "Show full config including token?"; then
     cat "$CONFIG_FILE"
   fi
 }
 
 modify_config() {
   cat <<'MODIFY'
-1. ???? Cloudflare ????
-2. ?????????????
-0. ??
+1. Re-run Cloudflare setup wizard
+2. Edit full config with editor
+0. Exit
 MODIFY
   local choice editor
-  read -r -p "???: " choice
+  read -r -p "Select: " choice
   case "$choice" in
     1) configure_cloudflare ;;
     2)
@@ -194,7 +194,7 @@ MODIFY
         elif command_exists vi; then
           editor="vi"
         else
-          error "?????????? nano ??? EDITOR ????"
+          error "No editor found. Install nano/vi or set EDITOR"
           return 1
         fi
       fi
@@ -204,7 +204,7 @@ MODIFY
       chmod 600 "$CONFIG_FILE"
       ;;
     0) return 0 ;;
-    *) warn "????" ;;
+    *) warn "Invalid choice" ;;
   esac
 }
 
@@ -215,7 +215,7 @@ detect_arch() {
     x86_64|amd64) printf 'amd64' ;;
     aarch64|arm64) printf 'arm64' ;;
     armv7l|armv7*) printf 'armv7' ;;
-    *) error "?????????$machine"; return 1 ;;
+    *) error "Unsupported architecture: $machine"; return 1 ;;
   esac
 }
 
@@ -231,7 +231,7 @@ download_file() {
   elif command_exists wget; then
     wget -q "$url" -O "$output"
   else
-    error "?? curl ? wget ????"
+    error "curl or wget is required for download"
     return 1
   fi
 }
@@ -270,7 +270,7 @@ extract_binary() {
       gzip -dc "$archive" > "$out"
       chmod +x "$out"
       ;;
-    *) error "??????????$archive"; return 1 ;;
+    *) error "Unsupported archive format: $archive"; return 1 ;;
   esac
 }
 
@@ -304,22 +304,22 @@ install_or_update() {
   require_command find || return 1
 
   if ! command_exists systemctl; then
-    error "???? systemd/systemctl?????????? systemd ??"
+    error "systemd/systemctl not found. This script supports systemd systems only"
     return 1
   fi
 
   arch="$(detect_arch)" || return 1
-  info "??????$arch"
+  info "Detected architecture: $arch"
 
   api_file="$(mktemp "${TMP_DIR}/ddns-release.XXXXXX.json")"
-  info "???? Release ??..."
+  info "Fetching latest Release metadata..."
   download_file "$(latest_release_api)" "$api_file" || return 1
 
   asset_url="$(find_asset_url "$arch" "$api_file")" || {
-    error "????? linux/$arch ? Release ??"
+    error "No matching linux/$arch Release asset found"
     return 1
   }
-  info "???$asset_url"
+  info "Downloading: $asset_url"
 
   archive="$(mktemp "${TMP_DIR}/ddns-archive.XXXXXX")"
   download_file "$asset_url" "$archive" || return 1
@@ -328,30 +328,30 @@ install_or_update() {
   extract_binary "$archive" "$workdir" || return 1
   extracted="$(locate_extracted_ddns "$workdir")"
   if [[ -z "$extracted" ]]; then
-    error "??????? ddns ?????"
+    error "No ddns binary found in the archive"
     return 1
   fi
 
   mkdir -p "$INSTALL_DIR" "$CONFIG_DIR"
   install -m 0755 "$extracted" "$BIN_PATH"
   if [[ ! -x "$BIN_PATH" ]]; then
-    error "?????????????$BIN_PATH"
+    error "Install failed, binary is not executable: $BIN_PATH"
     return 1
   fi
 
   write_service_file
   chmod 644 "$SERVICE_FILE"
   systemctl daemon-reload
-  success "DDNS ???/????$BIN_PATH"
+  success "DDNS installed/updated at: $BIN_PATH"
 
-  if confirm "?????? Cloudflare ???"; then
+  if confirm "Configure Cloudflare now?"; then
     configure_cloudflare
   fi
 }
 
 require_systemctl() {
   if ! command_exists systemctl; then
-    error "??? systemctl??????? systemd ??"
+    error "systemctl not found. This feature requires systemd"
     return 1
   fi
 }
@@ -359,19 +359,19 @@ require_systemctl() {
 start_service() {
   require_systemctl || return 1
   systemctl enable --now "$APP_NAME"
-  success "DDNS ??????????"
+  success "DDNS started and enabled at boot"
 }
 
 stop_service() {
   require_systemctl || return 1
   systemctl stop "$APP_NAME"
-  success "DDNS ???"
+  success "DDNS stopped"
 }
 
 restart_service() {
   require_systemctl || return 1
   systemctl restart "$APP_NAME"
-  success "DDNS ???"
+  success "DDNS restarted"
 }
 
 status_service() {
@@ -381,17 +381,17 @@ status_service() {
 
 logs_service() {
   if ! command_exists journalctl; then
-    error "??? journalctl"
+    error "journalctl not found"
     pause
     return 1
   fi
-  info "? Ctrl+C ??????"
+  info "Press Ctrl+C to stop following logs"
   journalctl -u "$APP_NAME" -f
 }
 
 uninstall_ddns() {
-  if ! confirm "???? DDNS???????? systemd ??"; then
-    info "?????"
+  if ! confirm "Uninstall DDNS? This removes the program and systemd service"; then
+    info "Uninstall canceled"
     return 0
   fi
 
@@ -406,14 +406,14 @@ uninstall_ddns() {
   fi
 
   rm -rf "$INSTALL_DIR"
-  success "????????$INSTALL_DIR"
+  success "Removed install directory: $INSTALL_DIR"
 
   if [[ -e "$CONFIG_DIR" ]]; then
-    if confirm "?????????? $CONFIG_DIR?"; then
+    if confirm "Also remove config directory $CONFIG_DIR?"; then
       rm -rf "$CONFIG_DIR"
-      success "????????$CONFIG_DIR"
+      success "Removed config directory: $CONFIG_DIR"
     else
-      info "????????$CONFIG_DIR"
+      info "Kept config directory: $CONFIG_DIR"
     fi
   fi
 }
@@ -423,21 +423,21 @@ main_menu() {
     clear || true
     cat <<'MENU'
 ========================================
- NewFuture/DDNS Cloudflare ??????
+ NewFuture/DDNS Cloudflare Manager
 ========================================
-1. ??/?? DDNS
-2. ???? Cloudflare ??
-3. ??????
-4. ????
-5. ?? DDNS
-6. ?? DDNS
-7. ?? DDNS
-8. ??????
-9. ????
-10. ?? DDNS
-0. ??
+1. Install/Update DDNS
+2. Configure Cloudflare
+3. Show current config
+4. Modify config
+5. Start DDNS
+6. Stop DDNS
+7. Restart DDNS
+8. Show service status
+9. Show logs
+10. Uninstall DDNS
+0. Exit
 MENU
-    printf "???: "
+    printf "Select: "
     read -r choice || exit 0
     case "$choice" in
       1) install_or_update; pause ;;
@@ -451,14 +451,14 @@ MENU
       9) logs_service ;;
       10) uninstall_ddns; pause ;;
       0) exit 0 ;;
-      *) warn "????"; pause ;;
+      *) warn "Invalid choice"; pause ;;
     esac
   done
 }
 
 main() {
   if [[ "$#" -gt 0 ]]; then
-    error "?????????????????????sudo bash $0"
+    error "This version is menu-only. Run: sudo bash $0"
     exit 2
   fi
   require_root
