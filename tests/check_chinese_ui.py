@@ -16,4 +16,4 @@ for script_name in ['ddns-manager.sh', 'install.sh']:
     missing = [item for item in required if item not in text]
     if missing:
         raise AssertionError(f'{script_name} missing Chinese UI text: {missing!r}')
-print('utf8-ui-ok')
+print('chinese-ui-ok')

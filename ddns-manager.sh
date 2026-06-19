@@ -22,13 +22,13 @@ warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$*"; }
 error() { printf "${RED}[ERROR]${NC} %s\n" "$*" >&2; }
 
 pause() {
-  printf "\nPress Enter to return to menu..."
+  printf "\n按 Enter 返回菜单..."
   read -r _ || true
 }
 
 require_root() {
   if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-    error "Please run as root: sudo bash $0"
+    error "请使用 root 权限运行: sudo bash $0"
     exit 1
   fi
 }
@@ -40,7 +40,7 @@ command_exists() {
 require_command() {
   local cmd="$1"
   if ! command_exists "$cmd"; then
-    error "Missing required command: $cmd"
+    error "缺少必要命令: $cmd"
     return 1
   fi
 }
@@ -123,41 +123,41 @@ JSON
 
 configure_cloudflare() {
   local token ipv4_raw enable_ipv6 ipv6_raw ttl proxied_answer proxied
-  info "Cloudflare API Token setup wizard"
-  read -r -s -p "Enter Cloudflare API Token: " token
+  info "Cloudflare API Token 配置向导"
+  read -r -s -p "请输入 Cloudflare API Token: " token
   printf "\n"
   if [[ -z "$token" ]]; then
-    error "API Token cannot be empty"
+    error "API Token 不能为空"
     return 1
   fi
 
-  read -r -p "Enter IPv4 domains, comma separated, or leave empty: " ipv4_raw
-  read -r -p "Enable IPv6? [y/N]: " enable_ipv6
+  read -r -p "请输入 IPv4 域名, 多个用英文逗号分隔, 可留空: " ipv4_raw
+  read -r -p "是否启用 IPv6? [y/N]: " enable_ipv6
   ipv6_raw=""
   if [[ "$enable_ipv6" == "y" || "$enable_ipv6" == "Y" ]]; then
-    read -r -p "Enter IPv6 domains, comma separated: " ipv6_raw
+    read -r -p "请输入 IPv6 域名, 多个用英文逗号分隔: " ipv6_raw
   fi
 
   if ! has_domain "$ipv4_raw" && ! has_domain "$ipv6_raw"; then
-    error "IPv4 and IPv6 domain lists cannot both be empty"
+    error "IPv4 和 IPv6 域名不能同时为空"
     return 1
   fi
 
-  read -r -p "TTL, default 600: " ttl
+  read -r -p "TTL, 默认 600: " ttl
   ttl="${ttl:-600}"
   if ! [[ "$ttl" =~ ^[0-9]+$ ]]; then
-    error "TTL must be a number"
+    error "TTL 必须是数字"
     return 1
   fi
 
-  read -r -p "Enable Cloudflare proxied mode? [y/N]: " proxied_answer
+  read -r -p "是否开启 Cloudflare 代理 proxied? [y/N]: " proxied_answer
   proxied="false"
   if [[ "$proxied_answer" == "y" || "$proxied_answer" == "Y" ]]; then
     proxied="true"
   fi
 
   write_cloudflare_config "$token" "$ipv4_raw" "$ipv6_raw" "$ttl" "$proxied"
-  success "Config written to: $CONFIG_FILE"
+  success "配置已写入: $CONFIG_FILE"
 }
 
 redact_token_stream() {
@@ -166,24 +166,24 @@ redact_token_stream() {
 
 show_config() {
   if [[ ! -f "$CONFIG_FILE" ]]; then
-    warn "Config file not found: $CONFIG_FILE"
+    warn "配置文件不存在: $CONFIG_FILE"
     return 0
   fi
-  info "Current config file: $CONFIG_FILE"
+  info "当前配置文件: $CONFIG_FILE"
   redact_token_stream < "$CONFIG_FILE"
-  if confirm "Show full config including token?"; then
+  if confirm "是否显示包含 token 的完整配置?"; then
     cat "$CONFIG_FILE"
   fi
 }
 
 modify_config() {
   cat <<'MODIFY'
-1. Re-run Cloudflare setup wizard
-2. Edit full config with editor
-0. Exit
+1. 重新运行 Cloudflare 配置向导
+2. 使用编辑器手动编辑完整配置
+0. 退出
 MODIFY
   local choice editor
-  read -r -p "Select: " choice
+  read -r -p "请选择: " choice
   case "$choice" in
     1) configure_cloudflare ;;
     2)
@@ -194,7 +194,7 @@ MODIFY
         elif command_exists vi; then
           editor="vi"
         else
-          error "No editor found. Install nano/vi or set EDITOR"
+          error "未找到编辑器, 请安装 nano/vi 或设置 EDITOR"
           return 1
         fi
       fi
@@ -204,7 +204,7 @@ MODIFY
       chmod 600 "$CONFIG_FILE"
       ;;
     0) return 0 ;;
-    *) warn "Invalid choice" ;;
+    *) warn "无效选择" ;;
   esac
 }
 
@@ -215,7 +215,7 @@ detect_arch() {
     x86_64|amd64) printf 'amd64' ;;
     aarch64|arm64) printf 'arm64' ;;
     armv7l|armv7*) printf 'armv7' ;;
-    *) error "Unsupported architecture: $machine"; return 1 ;;
+    *) error "不支持的系统架构: $machine"; return 1 ;;
   esac
 }
 
@@ -231,7 +231,7 @@ download_file() {
   elif command_exists wget; then
     wget -q "$url" -O "$output"
   else
-    error "curl or wget is required for download"
+    error "需要 curl 或 wget 用于下载"
     return 1
   fi
 }
@@ -270,7 +270,7 @@ extract_binary() {
       gzip -dc "$archive" > "$out"
       chmod +x "$out"
       ;;
-    *) error "Unsupported archive format: $archive"; return 1 ;;
+    *) error "不支持的压缩包格式: $archive"; return 1 ;;
   esac
 }
 
@@ -304,22 +304,22 @@ install_or_update() {
   require_command find || return 1
 
   if ! command_exists systemctl; then
-    error "systemd/systemctl not found. This script supports systemd systems only"
+    error "未检测到 systemd/systemctl, 本脚本仅支持 systemd 系统"
     return 1
   fi
 
   arch="$(detect_arch)" || return 1
-  info "Detected architecture: $arch"
+  info "检测到架构: $arch"
 
   api_file="$(mktemp "${TMP_DIR}/ddns-release.XXXXXX.json")"
-  info "Fetching latest Release metadata..."
+  info "正在获取最新 Release 信息..."
   download_file "$(latest_release_api)" "$api_file" || return 1
 
   asset_url="$(find_asset_url "$arch" "$api_file")" || {
-    error "No matching linux/$arch Release asset found"
+    error "未找到匹配 linux/$arch 的 Release 资产"
     return 1
   }
-  info "Downloading: $asset_url"
+  info "正在下载: $asset_url"
 
   archive="$(mktemp "${TMP_DIR}/ddns-archive.XXXXXX")"
   download_file "$asset_url" "$archive" || return 1
@@ -328,30 +328,30 @@ install_or_update() {
   extract_binary "$archive" "$workdir" || return 1
   extracted="$(locate_extracted_ddns "$workdir")"
   if [[ -z "$extracted" ]]; then
-    error "No ddns binary found in the archive"
+    error "压缩包中未找到 ddns 二进制文件"
     return 1
   fi
 
   mkdir -p "$INSTALL_DIR" "$CONFIG_DIR"
   install -m 0755 "$extracted" "$BIN_PATH"
   if [[ ! -x "$BIN_PATH" ]]; then
-    error "Install failed, binary is not executable: $BIN_PATH"
+    error "安装失败, 二进制文件不可执行: $BIN_PATH"
     return 1
   fi
 
   write_service_file
   chmod 644 "$SERVICE_FILE"
   systemctl daemon-reload
-  success "DDNS installed/updated at: $BIN_PATH"
+  success "DDNS 已安装/更新到: $BIN_PATH"
 
-  if confirm "Configure Cloudflare now?"; then
+  if confirm "是否现在配置 Cloudflare?"; then
     configure_cloudflare
   fi
 }
 
 require_systemctl() {
   if ! command_exists systemctl; then
-    error "systemctl not found. This feature requires systemd"
+    error "未找到 systemctl, 本功能需要 systemd"
     return 1
   fi
 }
@@ -359,19 +359,19 @@ require_systemctl() {
 start_service() {
   require_systemctl || return 1
   systemctl enable --now "$APP_NAME"
-  success "DDNS started and enabled at boot"
+  success "DDNS 已启动并设置开机自启"
 }
 
 stop_service() {
   require_systemctl || return 1
   systemctl stop "$APP_NAME"
-  success "DDNS stopped"
+  success "DDNS 已停止"
 }
 
 restart_service() {
   require_systemctl || return 1
   systemctl restart "$APP_NAME"
-  success "DDNS restarted"
+  success "DDNS 已重启"
 }
 
 status_service() {
@@ -381,17 +381,17 @@ status_service() {
 
 logs_service() {
   if ! command_exists journalctl; then
-    error "journalctl not found"
+    error "未找到 journalctl"
     pause
     return 1
   fi
-  info "Press Ctrl+C to stop following logs"
+  info "按 Ctrl+C 退出日志查看"
   journalctl -u "$APP_NAME" -f
 }
 
 uninstall_ddns() {
-  if ! confirm "Uninstall DDNS? This removes the program and systemd service"; then
-    info "Uninstall canceled"
+  if ! confirm "确认卸载 DDNS? 这会删除程序和 systemd 服务"; then
+    info "已取消卸载"
     return 0
   fi
 
@@ -406,14 +406,14 @@ uninstall_ddns() {
   fi
 
   rm -rf "$INSTALL_DIR"
-  success "Removed install directory: $INSTALL_DIR"
+  success "已删除程序目录: $INSTALL_DIR"
 
   if [[ -e "$CONFIG_DIR" ]]; then
-    if confirm "Also remove config directory $CONFIG_DIR?"; then
+    if confirm "是否同时删除配置目录 $CONFIG_DIR?"; then
       rm -rf "$CONFIG_DIR"
-      success "Removed config directory: $CONFIG_DIR"
+      success "已删除配置目录: $CONFIG_DIR"
     else
-      info "Kept config directory: $CONFIG_DIR"
+      info "已保留配置目录: $CONFIG_DIR"
     fi
   fi
 }
@@ -423,21 +423,21 @@ main_menu() {
     clear || true
     cat <<'MENU'
 ========================================
- NewFuture/DDNS Cloudflare Manager
+ NewFuture/DDNS Cloudflare 管理脚本
 ========================================
-1. Install/Update DDNS
-2. Configure Cloudflare
-3. Show current config
-4. Modify config
-5. Start DDNS
-6. Stop DDNS
-7. Restart DDNS
-8. Show service status
-9. Show logs
-10. Uninstall DDNS
-0. Exit
+1. 安装/更新 DDNS
+2. 配置 Cloudflare
+3. 查看当前配置
+4. 修改配置
+5. 启动 DDNS
+6. 停止 DDNS
+7. 重启 DDNS
+8. 查看运行状态
+9. 查看日志
+10. 卸载 DDNS
+0. 退出
 MENU
-    printf "Select: "
+    printf "请选择: "
     read -r choice || exit 0
     case "$choice" in
       1) install_or_update; pause ;;
@@ -451,14 +451,14 @@ MENU
       9) logs_service ;;
       10) uninstall_ddns; pause ;;
       0) exit 0 ;;
-      *) warn "Invalid choice"; pause ;;
+      *) warn "无效选择"; pause ;;
     esac
   done
 }
 
 main() {
   if [[ "$#" -gt 0 ]]; then
-    error "This version is menu-only. Run: sudo bash $0"
+    error "本脚本仅支持交互式菜单, 请直接运行: sudo bash $0"
     exit 2
   fi
   require_root
