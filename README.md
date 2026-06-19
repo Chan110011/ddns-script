@@ -7,13 +7,13 @@
 在 Linux 服务器上执行下面的命令。脚本会保存到当前目录的 `ddns-manager.sh`，方便以后重复使用：
 
 ```bash
-export LANG=C.UTF-8 LC_ALL=C.UTF-8; wget --no-cache -O ddns-manager.sh https://raw.githubusercontent.com/Chan110011/ddns-script/main/install.sh && chmod +x ddns-manager.sh && sudo -E bash ./ddns-manager.sh
+wget --no-cache -O ddns-manager.sh https://raw.githubusercontent.com/Chan110011/ddns-script/main/install.sh && chmod +x ddns-manager.sh && sudo bash ./ddns-manager.sh
 ```
 
 后续再次管理 DDNS 时，不需要重新下载，直接运行：
 
 ```bash
-export LANG=C.UTF-8 LC_ALL=C.UTF-8; sudo -E bash ./ddns-manager.sh
+sudo bash ./ddns-manager.sh
 ```
 
 ## 功能
@@ -38,5 +38,5 @@ export LANG=C.UTF-8 LC_ALL=C.UTF-8; sudo -E bash ./ddns-manager.sh
 
 ```bash
 chmod +x ddns-manager.sh
-sudo -E bash ./ddns-manager.sh
+sudo bash ./ddns-manager.sh
 ```
