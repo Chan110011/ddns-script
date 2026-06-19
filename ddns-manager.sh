@@ -246,13 +246,38 @@ arch = sys.argv[1]
 path = sys.argv[2]
 data = json.load(open(path, encoding='utf-8'))
 assets = data.get('assets', [])
-keywords = ['linux', arch]
+
+# NewFuture/DDNS Linux releases are usually direct binaries, for example:
+# ddns-glibc-linux_amd64. Prefer glibc for regular Linux servers.
+patterns = [
+    f'ddns-glibc-linux_{arch}',
+    f'ddns-musl-linux_{arch}',
+    f'linux_{arch}',
+    f'linux-{arch}',
+]
+archive_suffixes = ('.tar.gz', '.tgz', '.zip', '.gz')
+
+candidates = []
 for asset in assets:
-    name = asset.get('name', '').lower()
+    lower = asset.get('name', '').lower()
     url = asset.get('browser_download_url', '')
-    if all(k in name for k in keywords) and (name.endswith('.tar.gz') or name.endswith('.tgz') or name.endswith('.zip') or name.endswith('.gz')):
+    if url and any(pattern in lower for pattern in patterns):
+        candidates.append((lower, url))
+
+for pattern in patterns:
+    for lower, url in candidates:
+        if pattern in lower:
+            print(url)
+            sys.exit(0)
+
+# Backward-compatible fallback for older archive-style assets.
+for asset in assets:
+    lower = asset.get('name', '').lower()
+    url = asset.get('browser_download_url', '')
+    if url and 'linux' in lower and arch in lower and lower.endswith(archive_suffixes):
         print(url)
         sys.exit(0)
+
 print('', end='')
 sys.exit(1)
 PY
@@ -270,7 +295,12 @@ extract_binary() {
       gzip -dc "$archive" > "$out"
       chmod +x "$out"
       ;;
-    *) error "不支持的压缩包格式: $archive"; return 1 ;;
+    *)
+      # Current NewFuture/DDNS Linux assets are direct executable binaries
+      # such as ddns-glibc-linux_amd64. Treat unknown suffix as a binary.
+      cp "$archive" "$workdir/ddns"
+      chmod +x "$workdir/ddns"
+      ;;
   esac
 }
 
@@ -321,7 +351,7 @@ install_or_update() {
   }
   info "正在下载: $asset_url"
 
-  archive="$(mktemp "${TMP_DIR}/ddns-archive.XXXXXX")"
+  archive="${TMP_DIR}/$(basename "${asset_url%%\?*}")"
   download_file "$asset_url" "$archive" || return 1
 
   workdir="$(mktemp -d "${TMP_DIR}/ddns-extract.XXXXXX")"
