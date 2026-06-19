@@ -11,4 +11,6 @@ assert isinstance(data["ipv6"], list)
 assert data["ipv4"] or data["ipv6"]
 assert isinstance(data["ttl"], int)
 assert isinstance(data["proxy"], bool)
+assert data["index4"] == "public"
+assert data["index6"] == "public"
 print("valid")
