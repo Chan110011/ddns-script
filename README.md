@@ -1,19 +1,19 @@
-﻿# ddns-script
+# ddns-script
 
 基于 [NewFuture/DDNS](https://github.com/NewFuture/DDNS) 的 Cloudflare DNS 一键管理脚本。
 
 ## 一键安装/管理
 
-在 Linux 服务器上执行：
+在 Linux 服务器上执行下面的命令。脚本会保存到当前目录的 `ddns-manager.sh`，方便以后重复使用：
 
 ```bash
-curl -fsSL -o /tmp/ddns-manager.sh https://raw.githubusercontent.com/Chan110011/ddns-script/main/install.sh && sudo bash /tmp/ddns-manager.sh
+export LANG=C.UTF-8 LC_ALL=C.UTF-8; wget --no-cache -O ddns-manager.sh https://raw.githubusercontent.com/Chan110011/ddns-script/main/install.sh && chmod +x ddns-manager.sh && sudo -E bash ./ddns-manager.sh
 ```
 
-如果系统没有 `curl`，可以使用：
+后续再次管理 DDNS 时，不需要重新下载，直接运行：
 
 ```bash
-wget -O /tmp/ddns-manager.sh https://raw.githubusercontent.com/Chan110011/ddns-script/main/install.sh && sudo bash /tmp/ddns-manager.sh
+export LANG=C.UTF-8 LC_ALL=C.UTF-8; sudo -E bash ./ddns-manager.sh
 ```
 
 ## 功能
@@ -38,6 +38,5 @@ wget -O /tmp/ddns-manager.sh https://raw.githubusercontent.com/Chan110011/ddns-s
 
 ```bash
 chmod +x ddns-manager.sh
-sudo ./ddns-manager.sh
+sudo -E bash ./ddns-manager.sh
 ```
-
